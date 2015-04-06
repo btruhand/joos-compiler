@@ -1433,8 +1433,13 @@ void CodeGenerator::traverseAndGenerate(ForStmt* stmt) {
     // Order based on JLS 14.13.2
     asmc("For statement init");
     int saved_scope_offset = scope_offset;
-    asma("push esp ; save esp");
-    scope_offset-= 4;
+    bool localForInit = !stmt->emptyForInit() && stmt->getForInit()->isLocalVarDecl();
+
+    if(localForInit) {
+        asma("push esp ; save esp");
+        scope_offset-= 4;
+    }
+
     if(!stmt->emptyForInit()) {
         traverseAndGenerate(stmt->getForInit());
     }
@@ -1464,7 +1469,11 @@ void CodeGenerator::traverseAndGenerate(ForStmt* stmt) {
     asmc("For statement end");
     asml(lbl_end);
     scope_offset = saved_scope_offset;
-    asma("pop esp ; pop back old esp");
+   
+    if(localForInit) {
+        asma("pop ebx; pop the local variable of the for init");
+        asma("pop esp ; pop back old esp");
+    }
 }
 
 void CodeGenerator::traverseAndGenerate(ExpressionStar* exprStar) {
