@@ -1508,18 +1508,18 @@ void CodeGenerator::traverseAndGenerate(Constructor* ctor) {
     CALL_IDIOM();
 
     CompilationTable* superclass = ((ClassTable*) processing->getSymbolTable())->getClass()->getSuper()->getSuperClassTable();
+    asma("push dword [ebp + 8] ; push created this onto the stack before calling super constructor");
     if(superclass != NULL) {
         // there is a superclass -> then call the superclass
         // zero argument constructor
-        asma("push dword [ebp + 8] ; push created this onto the stack before calling super constructor");
         std::string superctor = superclass->getAConstructor("()")->getConstructor()->labelizedConstructorSignature();
         asma("extern " << superctor);
         asma("call " << superctor);
-        asma("pop ebx ; pop pushed this");
     }
 
     // call initializers here
     callInitializersOfDeclaredFields();
+    asma("pop ebx ; pop pushed created this");
 
     // set offset for constructor parameters from EBP,
     // starting offset is always 12 for constructors, because
