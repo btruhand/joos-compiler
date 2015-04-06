@@ -628,7 +628,7 @@ void CodeGenerator::traverseAndGenerate(BinaryExpression* binExpr) {
                 asma("push eax");
             }
             // Call concat
-            CALL_FUNCTION("java.lang.Integer.concat$java.lang.String$");
+            CALL_FUNCTION("java.lang.String.concat$java.lang.String$");
             asma("pop ebx ; pop this");
             asma("pop ebx ; pop argument");
         } else {
@@ -638,7 +638,7 @@ void CodeGenerator::traverseAndGenerate(BinaryExpression* binExpr) {
             // Push lhs string as (this)
             asma("push eax");
             // Call concat
-            CALL_FUNCTION("java.lang.Integer.concat$java.lang.String$");
+            CALL_FUNCTION("java.lang.String.concat$java.lang.String$");
             asma("pop ebx ; pop this");
             asma("pop ebx ; pop argument");
         }
