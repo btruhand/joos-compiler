@@ -80,7 +80,7 @@
 
 void CodeGenerator::CALL_FUNCTION(std::string fn_name) {
     std::string constructor_prefix = LabelManager::labelizeForConstructor(processing->getCanonicalName()) + "$";
-    std::string method_prefix = processing->getCanonicalName() + "$";
+    std::string method_prefix = processing->getCanonicalName();
     std::string alloc_prefix = LabelManager::labelizeForAlloc(processing->getCanonicalName());
 
     // If it is a constructor we need to allocate 'this'
