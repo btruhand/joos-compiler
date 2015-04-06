@@ -399,7 +399,7 @@ void CodeGenerator::traverseAndGenerate(BinaryExpression* binExpr) {
 
     // Order based on JLS 15.7.2, except || (lazy or) and && (lazy and)
     traverseAndGenerate(lhs_expr);
-    if(!binExpr->isLazyOr() && binExpr->isLazyAnd()) {
+    if(!binExpr->isLazyOr() && !binExpr->isLazyAnd()) {
         asma("push eax");
         traverseAndGenerate(rhs_expr);
         asma("mov ebx, eax ; put RHS value into ebx");
