@@ -726,7 +726,7 @@ void CodeGenerator::traverseAndGenerate(ArrayAccess* access) {
     asma("cmp ebx, 0 ; see if index is less than 0 or not");
     asma("jl " << exceptional_index_access);
 
-    asma("cmp ebx, [eax + 4] ; see if specified index is greater than or equal to length of the array");
+    asma("cmp ebx, [eax - 4] ; see if specified index is greater than or equal to length of the array");
     asma("jge " << exceptional_index_access);
     
     std::string proper_index_access = LABEL_GEN();
@@ -736,8 +736,7 @@ void CodeGenerator::traverseAndGenerate(ArrayAccess* access) {
     exceptionCall();
     
     asml(proper_index_access);
-    asma("neg ebx ; negate index");
-    asma("mov eax, [eax - " << ObjectLayout::transformToFieldIndexInAnObject(0) << " + 4*ebx]"
+    asma("mov eax, [eax + " << ObjectLayout::transformToFieldIndexInAnObject(0) << " + 4*ebx]"
          << " ; get the value of the array at the specified index multiplied by 4");
 }
 
@@ -773,10 +772,10 @@ void CodeGenerator::traverseAndGenerate(Name* name, CompilationTable** prevTypeF
                 exceptionCall();
                 asml(null_chk_lbl);
                 if(getValue) {
-                    asma("mov eax, [eax - " << objManager->getLayoutForClass(prevType)->indexOfFieldInObject(field)
+                    asma("mov eax, [eax + " << objManager->getLayoutForClass(prevType)->indexOfFieldInObject(field)
                          << "] ; grab value of field");
                 } else {
-                    asma("lea eax, [eax - " << objManager->getLayoutForClass(prevType)->indexOfFieldInObject(field)
+                    asma("lea eax, [eax + " << objManager->getLayoutForClass(prevType)->indexOfFieldInObject(field)
                          << "] ; grab reference of field");
                 }
             }
@@ -794,17 +793,17 @@ void CodeGenerator::traverseAndGenerate(Name* name, CompilationTable** prevTypeF
             asma("jne " << null_chk_lbl << " ; check if accessed array is null or not");
             exceptionCall();
             asml(null_chk_lbl);
-            asma("mov eax, [eax + 4] ; grab array length");
+            asma("mov eax, [eax - 4] ; grab array length");
         } // ELSE IS PACKAGE/FIELD DECL/PARAM <- the last two is impossible. We hope.
     } else {
         if (name->isReferringToField()) {
             FieldTable* field = name->getReferredField();
             asma("mov eax, [ebp + 8] ; get this");
             if(getValue) {
-                asma("mov eax, [eax - " << objManager->getLayoutForClass(processing)->indexOfFieldInObject(field)
+                asma("mov eax, [eax + " << objManager->getLayoutForClass(processing)->indexOfFieldInObject(field)
                      << "] ; grab field from this");
             } else {
-                asma("lea eax, [eax - " << objManager->getLayoutForClass(processing)->indexOfFieldInObject(field)
+                asma("lea eax, [eax + " << objManager->getLayoutForClass(processing)->indexOfFieldInObject(field)
                      << "] ; grab reference of field from this");
             }
 
@@ -859,15 +858,15 @@ void CodeGenerator::traverseAndGenerate(FieldAccess* access, bool getValue) {
         
         // precautionary check
         assert(getValue);
-        asma("mov eax, [eax + 4] ; get length of array");
+        asma("mov eax, [eax - 4] ; get length of array");
     } else if (access->isReferringToField()) {
         // must be accessing some field then
         FieldTable* field = access->getReferredField();
         unsigned int indexInClass = objManager->getLayoutForClass(field->getDeclaringClass())->indexOfFieldInObject(field);
         if(getValue) {
-            asma("mov eax, [eax - " << indexInClass << "] ; access value of field from some class");
+            asma("mov eax, [eax + " << indexInClass << "] ; access value of field from some class");
         } else {
-            asma("lea eax, [eax - " << indexInClass << "] ; access reference of field from some class");
+            asma("lea eax, [eax + " << indexInClass << "] ; access reference of field from some class");
         }
     } else {
         assert(false);
@@ -960,7 +959,7 @@ void CodeGenerator::traverseAndGenerate(MethodInvoke* invoke) {
         }
 
         if(invoke->isReferringToInterfaceMethod()) {
-            asma("mov eax, [eax - 8] ; get interface table");
+            asma("mov eax, [eax + 8] ; get interface table");
         } else {
             asma("mov eax, [eax] ; get virtual table");
         }
@@ -1166,7 +1165,7 @@ void CodeGenerator::traverseAndGenerate(CastExpression* cast) {
         asma("cmp eax, 0");
         asma("je " << all_good_lbl << " ; check if expression value is null");
         
-        asma("mov ebx, [eax - 4] ; grab inheritance table");
+        asma("mov ebx, [eax + 4] ; grab inheritance table");
         
         if (cast->isCastToPrimitiveType()) {
             CastPrimitive* castPrim = (CastPrimitive*) cast;
@@ -1213,7 +1212,7 @@ void CodeGenerator::traverseAndGenerate(InstanceOf* instanceof) {
     asma("jmp " << done_chk << " ; finish instanceof check because expression evaluates to null");
 
     asml(null_lbl_chk);
-    asma("mov eax, [eax - 4] ; grab inheritance table");
+    asma("mov eax, [eax + 4] ; grab inheritance table");
     
     Type* checkType = instanceof->getTypeToCheck();
     asma("mov eax, [eax + " << inhManager->getTypeMapping(checkType->getTypeAsString()) << "] ; grab what the inheritance table says");
@@ -1276,7 +1275,7 @@ void CodeGenerator::traverseAndGenerate(Assignment* assign) {
         asma("cmp edx, 0");
         asma("jl " << exceptional_access << " ; check if access index is less than 0 or not");
         
-        asma("cmp edx, [eax + 4]");
+        asma("cmp edx, [eax - 4]");
         asma("jge " << exceptional_access << " ; check if access index is greater than or equal to array length");
 
         std::string proper_array_access = LABEL_GEN();
@@ -1288,13 +1287,13 @@ void CodeGenerator::traverseAndGenerate(Assignment* assign) {
         asml(proper_array_access);
         if(accessed->isAccessingObjectArray()) {
             asmc("Accessing an array of reference");
-            asma("mov esi, [eax + 8] ; grab component type number");
+            asma("mov esi, [eax - 8] ; grab component type number");
 
             std::string good_assignment = LABEL_GEN();
             asma("cmp ebx, 0");
             asma("je " << good_assignment << " ; check if rhs value is null or not");
             
-            asma("mov ecx, [ebx - 4] ; grab rhs inheritance table");
+            asma("mov ecx, [ebx + 4] ; grab rhs inheritance table");
             asma("mov esi, [ecx + esi] ; grab inheritance status from inheritance table");
             
             asma("cmp esi, 1");
@@ -1302,8 +1301,7 @@ void CodeGenerator::traverseAndGenerate(Assignment* assign) {
             exceptionCall();
 
             asml(good_assignment);
-            asma("neg edx ; negate index");
-            asma("mov eax, [eax - " << ObjectLayout::transformToFieldIndexInAnObject(0) << " + 4*edx] ; get array component at index");
+            asma("mov eax, [eax + " << ObjectLayout::transformToFieldIndexInAnObject(0) << " + 4*edx] ; get array component at index");
         }
     } else {
         asma("pop eax ; get back lhs reference value");
