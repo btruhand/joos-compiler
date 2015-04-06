@@ -287,7 +287,6 @@ void CodeGenerator::traverseAndGenerate() {
                 asma("mov [eax+4], dword " << inhManager->getTableForType(classCanonicalName)->generateInheritanceTableName());
                 asma("mov [eax+8], dword " << interManager->getTableForType(classCanonicalName)->generateTableName());
                 asma("mov [eax+12], dword " << inhManager->getTypeMapping(classCanonicalName));
-                asma("push eax ; push allocated object onto the stack as 'this'");
                 
                 ObjectLayout* layoutOfClass = objManager->getLayoutForClass(processing);
                 asmc("Initialize all fields to their default 0");
