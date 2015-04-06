@@ -369,7 +369,7 @@ void CodeGenerator::traverseAndGenerate(FieldDecl* field) {
         } else {
             asma("mov [ebx + " << indexOfField << "], dword 0");
         }
-        RETURN_IDIOM();
+        asma("ret ; just return from instance initializer");
     }
 }
 
@@ -1228,7 +1228,7 @@ void CodeGenerator::traverseAndGenerate(Assignment* assign) {
         traverseAndGenerate(((AssignName*) assign)->getNameToAssign(), NULL, false);
     } else if(assign->isAssignField()) {
         asmc("ASSIGNMENT OF ACCESSED FIELD");
-        traverseAndGenerate(((AssignField*) assign)->getAssignedField());
+        traverseAndGenerate(((AssignField*) assign)->getAssignedField(), false);
     } else {
         asmc("ASSIGNMENT OF ARRAY COMPONENT");
         // assigning to an array component
@@ -1519,7 +1519,6 @@ void CodeGenerator::traverseAndGenerate(Constructor* ctor) {
 
     // call initializers here
     callInitializersOfDeclaredFields();
-    asma("pop ebx ; pop pushed created this");
 
     // set offset for constructor parameters from EBP,
     // starting offset is always 12 for constructors, because
