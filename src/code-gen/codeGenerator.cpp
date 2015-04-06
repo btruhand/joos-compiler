@@ -196,6 +196,7 @@ CodeGenerator::CodeGenerator(std::map<std::string, CompilationTable*>& compilati
     interManager(new ImplInterfaceMethodTableManager(compilations)),
     staticManager(new StaticFieldsManager(compilations)),
     fs(NULL),
+    processing(NULL),
     scope_offset(0)
 {}
 
@@ -740,7 +741,7 @@ void CodeGenerator::traverseAndGenerate(ArrayAccess* access) {
          << " ; get the value of the array at the specified index multiplied by 4");
 }
 
-void CodeGenerator::traverseAndGenerate(Name* name, CompilationTable** prevTypeForName) {
+void CodeGenerator::traverseAndGenerate(Name* name, CompilationTable** prevTypeForName, bool getValue) {
     // Order implicit based on JLS 15.7
     asmc("ACCESS OF LOCAL VAR/PARAMETER/FIELD FROM NAME");
     
@@ -771,7 +772,13 @@ void CodeGenerator::traverseAndGenerate(Name* name, CompilationTable** prevTypeF
                 asma("jne " << null_chk_lbl << " ; check if accessed object is null or not");
                 exceptionCall();
                 asml(null_chk_lbl);
-                asma("mov eax, [eax - " << objManager->getLayoutForClass(prevType)->indexOfFieldInObject(field) << "] ; grab field");
+                if(getValue) {
+                    asma("mov eax, [eax - " << objManager->getLayoutForClass(prevType)->indexOfFieldInObject(field)
+                         << "] ; grab value of field");
+                } else {
+                    asma("lea eax, [eax - " << objManager->getLayoutForClass(prevType)->indexOfFieldInObject(field)
+                         << "] ; grab reference of field");
+                }
             }
 
             Type* fieldType = name->getReferredField()->getField()->getFieldType();
@@ -793,8 +800,13 @@ void CodeGenerator::traverseAndGenerate(Name* name, CompilationTable** prevTypeF
         if (name->isReferringToField()) {
             FieldTable* field = name->getReferredField();
             asma("mov eax, [ebp + 8] ; get this");
-            asma("mov eax, [eax - " << objManager->getLayoutForClass(processing)->indexOfFieldInObject(field)
-                 << "] ; grab field from this");
+            if(getValue) {
+                asma("mov eax, [eax - " << objManager->getLayoutForClass(processing)->indexOfFieldInObject(field)
+                     << "] ; grab field from this");
+            } else {
+                asma("lea eax, [eax - " << objManager->getLayoutForClass(processing)->indexOfFieldInObject(field)
+                     << "] ; grab reference of field from this");
+            }
 
             Type* fieldType = field->getField()->getFieldType();
             if (fieldType->isReferenceType() && prevTypeForName != NULL) {
@@ -816,14 +828,18 @@ void CodeGenerator::traverseAndGenerate(Name* name, CompilationTable** prevTypeF
                 } //  ELSE IS PRIMITIVE TYPE
             }
 
-            asma("mov eax, [ebp + " << addressTable[paramOrLocal] << "] ; grab parameter or local variable");
+            if(getValue) {
+                asma("mov eax, [ebp + " << addressTable[paramOrLocal] << "] ; grab parameter or local variable");
+            } else {
+                asma("lea eax, [ebp + " << addressTable[paramOrLocal] << "] ; grab reference of parameter or local variable");
+            }
         } else if (name->isReferringToType() && prevTypeForName != NULL) {
             *prevTypeForName = name->getReferredType();
         } // BETTER BE CORRECT - ELSE IS PACKAGE
     }
 }
 
-void CodeGenerator::traverseAndGenerate(FieldAccess* access) {
+void CodeGenerator::traverseAndGenerate(FieldAccess* access, bool getValue) {
     // Order based on JLS 15.11.1
     asmc("FIELD ACCESS FROM PRIMARY");
     traverseAndGenerate(access->getAccessedFieldPrimary());
@@ -838,12 +854,21 @@ void CodeGenerator::traverseAndGenerate(FieldAccess* access) {
     
     if (access->linkToArrayLength()) {
         // accessing the length of an array
+        // assume length can never be assigned to
+        // because it's checked previously
+        
+        // precautionary check
+        assert(getValue);
         asma("mov eax, [eax + 4] ; get length of array");
     } else if (access->isReferringToField()) {
         // must be accessing some field then
         FieldTable* field = access->getReferredField();
         unsigned int indexInClass = objManager->getLayoutForClass(field->getDeclaringClass())->indexOfFieldInObject(field);
-        asma("mov eax, [eax - " << indexInClass << "] ; access field from some class");
+        if(getValue) {
+            asma("mov eax, [eax - " << indexInClass << "] ; access value of field from some class");
+        } else {
+            asma("lea eax, [eax - " << indexInClass << "] ; access reference of field from some class");
+        }
     } else {
         assert(false);
     }
@@ -1200,7 +1225,8 @@ void CodeGenerator::traverseAndGenerate(Assignment* assign) {
     // Specific: JLS 15.26
     if(assign->isAssignName()) {
         asmc("ASSIGNMENT OF NAME");
-        traverseAndGenerate(((AssignName*) assign)->getNameToAssign());
+        // indicate we only want the reference
+        traverseAndGenerate(((AssignName*) assign)->getNameToAssign(), NULL, false);
     } else if(assign->isAssignField()) {
         asmc("ASSIGNMENT OF ACCESSED FIELD");
         traverseAndGenerate(((AssignField*) assign)->getAssignedField());
@@ -1210,10 +1236,15 @@ void CodeGenerator::traverseAndGenerate(Assignment* assign) {
         ArrayAccess* accessed = ((AssignArray*) assign)->getAssignedArray();
         if(accessed->isArrayAccessName()) {
             // accessing an array from a name
-            traverseAndGenerate(((ArrayAccessName*) accessed)->getNameOfAccessedArray());
+            traverseAndGenerate(((ArrayAccessName*) accessed)->getNameOfAccessedArray(), NULL, false);
         } else {
             // accessing an array from a primary
-            traverseAndGenerate(((ArrayAccessPrimary*) accessed)->getAccessedPrimaryArray());
+            Primary* primPart = ((ArrayAccessPrimary*) accessed)->getAccessedPrimaryArray();
+            if(primPart->isFieldAccess()) {
+                traverseAndGenerate((FieldAccess*) primPart, false);
+            } else {
+                traverseAndGenerate(primPart);
+            }
         }
     }
     

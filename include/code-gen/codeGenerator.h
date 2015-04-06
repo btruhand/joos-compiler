@@ -85,8 +85,8 @@ class CodeGenerator {
         void traverseAndGenerate(PrimaryExpression*);
         void traverseAndGenerate(Primary*);
         void traverseAndGenerate(ArrayAccess*);
-        void traverseAndGenerate(Name* name, CompilationTable** prevTypeForName = NULL);
-        void traverseAndGenerate(FieldAccess*);
+        void traverseAndGenerate(Name* name, CompilationTable** prevTypeForName = NULL, bool getValue = true);
+        void traverseAndGenerate(FieldAccess*, bool getValue = true);
         void traverseAndGenerate(MethodInvoke*);
         void traverseAndGenerate(ArgumentsStar*, bool targetReferencePushed = false);
         void traverseAndGenerate(Arguments*, bool);
@@ -119,6 +119,7 @@ class CodeGenerator {
         // modularize certain calls
         void exceptionCall();
         void arrayCreationCall(const std::string&);
+
         // lol bad cade
         void CALL_FUNCTION(std::string);
         void CALL_IDIOM();
