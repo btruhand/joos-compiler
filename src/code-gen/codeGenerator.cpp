@@ -1432,8 +1432,9 @@ void CodeGenerator::traverseAndGenerate(WhileStmt* stmt) {
 void CodeGenerator::traverseAndGenerate(ForStmt* stmt) {
     // Order based on JLS 14.13.2
     asmc("For statement init");
-    asma("push esp ; save esp");
     int saved_scope_offset = scope_offset;
+    asma("push esp ; save esp");
+    scope_offset-= 4;
     if(!stmt->emptyForInit()) {
         traverseAndGenerate(stmt->getForInit());
     }
@@ -1488,9 +1489,10 @@ void CodeGenerator::traverseAndGenerate(NestedBlock* stmt) {
     if(!stmt->isEmptyNestedBlock()) {
         int saved_scope_offset = scope_offset;
         asma("push esp ; save position of stack pointer before entering nested block");
+        scope_offset-= 4;
         traverseAndGenerate(stmt->getNestedBlock());
-        scope_offset = saved_scope_offset;
         asma("pop esp ; after entering nested block, pop back esp");
+        scope_offset = saved_scope_offset;
     }
 }
 
