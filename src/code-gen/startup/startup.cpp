@@ -69,16 +69,16 @@ void Startup::generateStartupFile(VTableLayout* arrayVTable, std::vector<Inherit
     fs << "pop ebx ; get back old pushed eax\n";
     fs << "shr ebx, 2 ; divide ebx by 4\n";
     fs << "mov [eax], dword -1 ; store invalid component type\n";
-    fs << "mov [eax - 4], ebx ; store length\n";
-    fs << "add eax, -8 ; sub 8 to start storing the tables\n";
+    fs << "mov [eax + 4], ebx ; store length\n";
+    fs << "add eax, 8 ; sub 8 to start storing the tables\n";
     fs << "mov [eax], dword " << LabelManager::getLabelForArrayVirtualTable() << " ; store array virtual table\n";
-    fs << "mov [eax-8], dword " << LabelManager::getLabelForArrayImplInterfaceMethodTable() << " ; store array interface method table\n";
+    fs << "mov [eax+8], dword " << LabelManager::getLabelForArrayImplInterfaceMethodTable() << " ; store array interface method table\n";
     fs << "; initialize array to all 0s\n";
     fs << "mov ecx, ebx\n";
-    fs << "lea ebx, [eax - 16]\n";
+    fs << "lea ebx, [eax + 16]\n";
     fs << "initArray:\n";
     fs << "mov [ebx], dword 0\n";
-    fs << "add ebx, -4\n";
+    fs << "add ebx, 4\n";
     fs << "loop initArray\n";
     fs << "ret\n\n";
 
