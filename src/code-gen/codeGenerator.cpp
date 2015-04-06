@@ -343,9 +343,6 @@ void CodeGenerator::traverseAndGenerate(FieldDecl* field) {
 
     unsigned int indexOfField = 0;
     if(!isStatic) {
-        // not static field, 
-        // then need to have the call idiom
-        CALL_IDIOM();
         // non-static get the index of the field in the object
         indexOfField = objManager->getLayoutForClass(processing)->indexOfFieldInObject(field->getFieldTable());
     }
@@ -1435,6 +1432,7 @@ void CodeGenerator::traverseAndGenerate(WhileStmt* stmt) {
 void CodeGenerator::traverseAndGenerate(ForStmt* stmt) {
     // Order based on JLS 14.13.2
     asmc("For statement init");
+    asma("push esp ; save esp");
     int saved_scope_offset = scope_offset;
     if(!stmt->emptyForInit()) {
         traverseAndGenerate(stmt->getForInit());
@@ -1465,6 +1463,7 @@ void CodeGenerator::traverseAndGenerate(ForStmt* stmt) {
     asmc("For statement end");
     asml(lbl_end);
     scope_offset = saved_scope_offset;
+    asma("pop esp ; pop back old esp");
 }
 
 void CodeGenerator::traverseAndGenerate(ExpressionStar* exprStar) {
@@ -1488,8 +1487,10 @@ void CodeGenerator::traverseAndGenerate(NestedBlock* stmt) {
     // JLS 14.2
     if(!stmt->isEmptyNestedBlock()) {
         int saved_scope_offset = scope_offset;
+        asma("push esp ; save position of stack pointer before entering nested block");
         traverseAndGenerate(stmt->getNestedBlock());
         scope_offset = saved_scope_offset;
+        asma("pop esp ; after entering nested block, pop back esp");
     }
 }
 
@@ -1508,13 +1509,14 @@ void CodeGenerator::traverseAndGenerate(Constructor* ctor) {
     CALL_IDIOM();
 
     CompilationTable* superclass = ((ClassTable*) processing->getSymbolTable())->getClass()->getSuper()->getSuperClassTable();
-    asma("push dword [ebp + 8] ; push created this onto the stack before calling super constructor");
     if(superclass != NULL) {
         // there is a superclass -> then call the superclass
         // zero argument constructor
+        asma("push dword [ebp + 8] ; push created this onto the stack before calling super constructor");
         std::string superctor = superclass->getAConstructor("()")->getConstructor()->labelizedConstructorSignature();
         asma("extern " << superctor);
         asma("call " << superctor);
+        asma("pop ebx ; pop pushed this");
     }
 
     // call initializers here
