@@ -1357,7 +1357,7 @@ void CodeGenerator::traverseAndGenerate(BlockStmts* stmt) {
     if(!stmt->isLastStatement()) {
         traverseAndGenerate(stmt->getNextBlockStmt());
     }
-
+    
     if(stmt->isLocalVarDecl()) {
         traverseAndGenerate((LocalDecl*) stmt);
     } else if(stmt->isIfStmt() || stmt->isIfThenElseStmt()) {
@@ -1446,7 +1446,8 @@ void CodeGenerator::traverseAndGenerate(ForStmt* stmt) {
     bool localForInit = !stmt->emptyForInit() && stmt->getForInit()->isLocalVarDecl();
 
     if(localForInit) {
-        asma("push esp ; save esp");
+        asma("mov eax, esp");
+        asma("push esp ; save esp since there's a local variable decl in the for init");
         scope_offset-= 4;
     }
 
@@ -1482,7 +1483,8 @@ void CodeGenerator::traverseAndGenerate(ForStmt* stmt) {
    
     if(localForInit) {
         asma("pop ebx; pop the local variable of the for init");
-        asma("pop esp ; pop back old esp");
+        asma("pop eax ; pop back old esp");
+        asma("mov esp, eax ; restore old esp");
     }
 }
 
@@ -1507,10 +1509,12 @@ void CodeGenerator::traverseAndGenerate(NestedBlock* stmt) {
     // JLS 14.2
     if(!stmt->isEmptyNestedBlock()) {
         int saved_scope_offset = scope_offset;
-        asma("push esp ; save position of stack pointer before entering nested block");
+        asma("mov eax, esp");
+        asma("push eax ; save position of stack pointer before entering nested block");
         scope_offset-= 4;
         traverseAndGenerate(stmt->getNestedBlock());
-        asma("pop esp ; after entering nested block, pop back esp");
+        asma("pop eax ; after entering nested block, pop back esp");
+        asma("mov esp, eax ; restore esp");
         scope_offset = saved_scope_offset;
     }
 }
