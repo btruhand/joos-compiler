@@ -1511,7 +1511,7 @@ void CodeGenerator::traverseAndGenerate(Constructor* ctor) {
     if(superclass != NULL) {
         // there is a superclass -> then call the superclass
         // zero argument constructor
-        asma("push dword [ebp - 8] ; push created this onto the stack before calling super constructor");
+        asma("push dword [ebp + 8] ; push created this onto the stack before calling super constructor");
         std::string superctor = superclass->getAConstructor("()")->getConstructor()->labelizedConstructorSignature();
         asma("extern " << superctor);
         asma("call " << superctor);
