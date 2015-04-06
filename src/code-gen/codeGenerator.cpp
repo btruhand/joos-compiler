@@ -278,7 +278,7 @@ void CodeGenerator::traverseAndGenerate() {
 
             if(!isAbstractClass) {
                 // not an abstract class, create allocator for class
-                asml(LabelManager::labelizeForAlloc(classCanonicalName));
+                asmgl(LabelManager::labelizeForAlloc(classCanonicalName));
                 asma("mov eax, " << objManager->getLayoutForClass(processing)->sizeOfObject());
                 CALL_FUNCTION("__malloc");
                 
