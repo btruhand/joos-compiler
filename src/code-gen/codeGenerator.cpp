@@ -1130,6 +1130,16 @@ void CodeGenerator::traverseAndGenerate(LiteralOrThis* lit) {
 
 void CodeGenerator::traverseAndGenerate(NegationExpression* negExpr) {
     // Order based on JLS 15.7
+    
+    if(negExpr->isNumericNegation() &&
+       (negExpr->getNegatedExpression()->isPrimaryExpression()) &&
+       ((PrimaryExpression*) negExpr->getNegatedExpression())->getPrimaryExpression()->isNumber()) {
+       asmc("Negative number");
+       PrimaryExpression* primExpr = (PrimaryExpression*) negExpr->getNegatedExpression();
+       asma("mov eax, -" << ((LiteralOrThis*) (primExpr->getPrimaryExpression()))->getLiteralToken()->getString());
+       return;
+    }
+
     traverseAndGenerate(negExpr->getNegatedExpression());
     if(negExpr->isNumericNegation()) {
         // Specific: JLS 15.18.2
