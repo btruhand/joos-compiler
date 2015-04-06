@@ -1026,7 +1026,8 @@ void CodeGenerator::traverseAndGenerate(PrimaryNewArray* newArray) {
     asma("jge " << less_than_zero_chk << " ; check if dimension expression is less than zero or not");
     exceptionCall();
     asml(less_than_zero_chk);
-    arrayCreationCall("eax * 4");
+    asma("shl eax, 2 ; multiply eax by 4");
+    arrayCreationCall("eax");
     
     Type* arrayType = newArray->getArrayType();
     std::string labelizedInhTable = LabelManager::getLabelForArrayInheritanceTable(arrayType->getTypeAsString());
