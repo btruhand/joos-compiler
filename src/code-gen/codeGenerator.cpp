@@ -328,39 +328,48 @@ void CodeGenerator::traverseAndGenerate(ClassBodyDecls* body) {
 }
 
 void CodeGenerator::traverseAndGenerate(FieldDecl* field) {
-    if(field->isInitialized()) {
-        std::string initializerLabel = field->getFieldTable()->generateFieldInitializerLabel();
-        bool isStatic = field->isStatic();
+    std::string initializerLabel = field->getFieldTable()->generateFieldInitializerLabel();
+    bool isStatic = field->isStatic();
 
-        asmc("Field initializer for " << initializerLabel);
-        
-        if(isStatic) {
-            // static field, initializer needs to be globaled
-            asmc("Initializer of static needs to be globalled");
-            asmgl(initializerLabel);
-        } else {
-            asml(initializerLabel);
-        }
+    asmc("Field initializer for " << initializerLabel);
+    
+    if(isStatic) {
+        // static field, initializer needs to be globaled
+        asmc("Initializer of static needs to be globalled");
+        asmgl(initializerLabel);
+    } else {
+        asml(initializerLabel);
+    }
 
-        unsigned int indexOfField = 0;
-        if(!isStatic) {
-            // not static field, 
-            // then need to have the call idiom
-            CALL_IDIOM();
-            // non-static get the index of the field in the object
-            indexOfField = objManager->getLayoutForClass(processing)->indexOfFieldInObject(field->getFieldTable());
-        }
+    unsigned int indexOfField = 0;
+    if(!isStatic) {
+        // not static field, 
+        // then need to have the call idiom
+        CALL_IDIOM();
+        // non-static get the index of the field in the object
+        indexOfField = objManager->getLayoutForClass(processing)->indexOfFieldInObject(field->getFieldTable());
+    }
 
+    bool isInitialized = field->isInitialized();
+    if(isInitialized) {
         traverseAndGenerate(field->getInitializingExpression());
-        asmc("Initialize field with it's initializer value");
-        if(isStatic) {
+    }
+
+    asmc("Initialize field with it's initializer value");
+    if(isStatic) {
+        if(isInitialized) {
             asma("mov [" << field->getFieldTable()->generateFieldLabel() << "], eax");
-            asma("ret ; just return from static initialize");
-        } else {
-            asma("mov ebx, [ebp + 8] ; get this");
-            asma("mov [ebx - " << indexOfField << "], eax");
-            RETURN_IDIOM();
         }
+
+        asma("ret ; just return from static initialize");
+    } else if(!isStatic) {
+        asma("mov ebx, [ebp + 8] ; get this");
+        if(isInitialized) {
+            asma("mov [ebx - " << indexOfField << "], eax");
+        } else {
+            asma("mov [ebx - " << indexOfField << "], dword 0");
+        }
+        RETURN_IDIOM();
     }
 }
 
