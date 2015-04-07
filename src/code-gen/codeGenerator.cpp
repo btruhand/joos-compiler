@@ -1323,7 +1323,7 @@ void CodeGenerator::traverseAndGenerate(ClassMethod* method) {
         asmc("Method Body - " << signature);
         asmgl(signature);
         CALL_IDIOM();
-        scope_offset = -4;
+        scope_offset = 0;
 
         // Add Parameters to the address table
         // If static there is no implicit this
@@ -1382,8 +1382,8 @@ void CodeGenerator::traverseAndGenerate(LocalDecl* local) {
     // Everything primitive/reference type/array will
     // be stored in a DD (32 bits -> 4 bytes) on the stack
     asmc("Local Decl - " << id);
+    scope_offset-= 4;
     addressTable[local->getLocalTable()] = scope_offset;
-    scope_offset -= 4;
 
     // Set the value of the expression to the new declaration
     traverseAndGenerate(local->getLocalInitExpr());
@@ -1443,13 +1443,6 @@ void CodeGenerator::traverseAndGenerate(ForStmt* stmt) {
     // Order based on JLS 14.13.2
     asmc("For statement init");
     int saved_scope_offset = scope_offset;
-    bool localForInit = !stmt->emptyForInit() && stmt->getForInit()->isLocalVarDecl();
-
-    if(localForInit) {
-        asma("mov eax, esp");
-        asma("push esp ; save esp since there's a local variable decl in the for init");
-        scope_offset-= 4;
-    }
 
     if(!stmt->emptyForInit()) {
         traverseAndGenerate(stmt->getForInit());
@@ -1479,13 +1472,8 @@ void CodeGenerator::traverseAndGenerate(ForStmt* stmt) {
     // END
     asmc("For statement end");
     asml(lbl_end);
+    asma("lea esp, [ebp + " << saved_scope_offset << "] ; restore esp before entering for statement");
     scope_offset = saved_scope_offset;
-   
-    if(localForInit) {
-        asma("pop ebx; pop the local variable of the for init");
-        asma("pop eax ; pop back old esp");
-        asma("mov esp, eax ; restore old esp");
-    }
 }
 
 void CodeGenerator::traverseAndGenerate(ExpressionStar* exprStar) {
@@ -1509,12 +1497,9 @@ void CodeGenerator::traverseAndGenerate(NestedBlock* stmt) {
     // JLS 14.2
     if(!stmt->isEmptyNestedBlock()) {
         int saved_scope_offset = scope_offset;
-        asma("mov eax, esp");
-        asma("push eax ; save position of stack pointer before entering nested block");
         scope_offset-= 4;
         traverseAndGenerate(stmt->getNestedBlock());
-        asma("pop eax ; after entering nested block, pop back esp");
-        asma("mov esp, eax ; restore esp");
+        asma("lea esp, [ebp + " << saved_scope_offset << "] ; restore esp before entering nested block");
         scope_offset = saved_scope_offset;
     }
 }
@@ -1552,7 +1537,7 @@ void CodeGenerator::traverseAndGenerate(Constructor* ctor) {
     // there's always this
     setParameterOffsetFromEBP(ctor->getConstructorParameters()->getListOfParameters(), 12);
 
-    scope_offset = -4;
+    scope_offset = 0;
     traverseAndGenerate(ctor->getConstructorBody());
 
     if(ctor->canConstructorCompleteNormally()) {
