@@ -250,7 +250,7 @@ void CodeGenerator::traverseAndGenerate() {
             ss << CODE_OUT << "/" << classCanonicalName << ".s";
             fs = new std::ofstream(ss.str());
 #else
-            fs = new std::ofstream(classCanonicalName + ".s");
+            fs = new std::ofstream("output/" + classCanonicalName + ".s");
 #endif
             processing = it->second;
             bool isAbstractClass = ((ClassTable*) processing->getSymbolTable())->getClass()->isAbstract();
@@ -1488,7 +1488,6 @@ void CodeGenerator::traverseAndGenerate(NestedBlock* stmt) {
     // JLS 14.2
     if(!stmt->isEmptyNestedBlock()) {
         int saved_scope_offset = scope_offset;
-        scope_offset-= 4;
         traverseAndGenerate(stmt->getNestedBlock());
         asma("lea esp, [ebp + " << saved_scope_offset << "] ; restore esp before entering nested block");
         scope_offset = saved_scope_offset;
