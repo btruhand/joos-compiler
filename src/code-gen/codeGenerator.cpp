@@ -250,7 +250,7 @@ void CodeGenerator::traverseAndGenerate() {
             ss << CODE_OUT << "/" << classCanonicalName << ".s";
             fs = new std::ofstream(ss.str());
 #else
-            fs = new std::ofstream("output/" + classCanonicalName + ".s");
+            fs = new std::ofstream(classCanonicalName + ".s");
 #endif
             processing = it->second;
             bool isAbstractClass = ((ClassTable*) processing->getSymbolTable())->getClass()->isAbstract();
@@ -874,6 +874,7 @@ void CodeGenerator::traverseAndGenerate(MethodInvoke* invoke) {
     // Order based on JLS 15.12.4
     asmc("METHOD INVOCATION");
     bool targetReferencePushed = false;
+    bool pushThis = false;
 
     if(invoke->isNormalMethodCall()) {
         Name* prefixOfMethod = ((MethodNormalInvoke*) invoke)->getNameOfInvokedMethod()->getNextName();
@@ -888,6 +889,10 @@ void CodeGenerator::traverseAndGenerate(MethodInvoke* invoke) {
             // get the value of the prefix first
             traverseAndGenerate(prefixOfMethod);
             targetReferencePushed = true;
+        } else if(prefixOfMethod == NULL) {
+            // invoking one's own method, target reference is this
+            targetReferencePushed = true;
+            pushThis = true;
         }
     } else {
         // method call through a field access
@@ -944,12 +949,12 @@ void CodeGenerator::traverseAndGenerate(MethodInvoke* invoke) {
             asmc("METHOD INVOCATION THROUGH VIRTUAL TABLE");
         }
 
-        if(targetReferencePushed) {
-            // a target reference was computed
+        if(!pushThis) {
+            // a target reference was computed that is not this
             // push eax, which should have the target reference
             asma("push eax ; push target reference");
         } else {
-            // no target reference was computed
+            // target reference computed is this
             // then use this instead
             asma("mov eax, [ebp + 8] ; get this");
             asma("push eax ; push this as target reference");

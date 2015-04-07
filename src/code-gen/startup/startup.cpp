@@ -40,7 +40,7 @@ void Startup::generateStartupFile(VTableLayout* arrayVTable, std::vector<Inherit
             ss << CODE_OUT << "/_startup.s";
             std::ofstream fs(ss.str());
 #else
-            std::ofstream fs("output/_startup.s");
+            std::ofstream fs("_startup.s");
 #endif
     
     // data section

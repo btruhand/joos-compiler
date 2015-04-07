@@ -51,3 +51,5 @@ tags
 
 # Assembly files
 *.s
+
+*.zip
