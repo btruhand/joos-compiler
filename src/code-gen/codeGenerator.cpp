@@ -1242,15 +1242,11 @@ void CodeGenerator::traverseAndGenerate(Assignment* assign) {
         ArrayAccess* accessed = ((AssignArray*) assign)->getAssignedArray();
         if(accessed->isArrayAccessName()) {
             // accessing an array from a name
-            traverseAndGenerate(((ArrayAccessName*) accessed)->getNameOfAccessedArray(), NULL, false);
+            traverseAndGenerate(((ArrayAccessName*) accessed)->getNameOfAccessedArray());
         } else {
             // accessing an array from a primary
             Primary* primPart = ((ArrayAccessPrimary*) accessed)->getAccessedPrimaryArray();
-            if(primPart->isFieldAccess()) {
-                traverseAndGenerate((FieldAccess*) primPart, false);
-            } else {
-                traverseAndGenerate(primPart);
-            }
+            traverseAndGenerate(primPart);
         }
     }
     
@@ -1269,11 +1265,6 @@ void CodeGenerator::traverseAndGenerate(Assignment* assign) {
         asma("pop eax ; get back referenced array");
 
         ArrayAccess* accessed = ((AssignArray*) assign)->getAssignedArray();
-        if(accessed->isArrayAccessName()) {
-            traverseAndGenerate(((ArrayAccessName*) accessed)->getNameOfAccessedArray());
-        } else {
-            traverseAndGenerate(((ArrayAccessPrimary*) accessed)->getAccessedPrimaryArray());
-        }
         
         std::string exceptional_access = LABEL_GEN();
         asma("cmp eax, 0");
@@ -1308,8 +1299,8 @@ void CodeGenerator::traverseAndGenerate(Assignment* assign) {
             exceptionCall();
 
             asml(good_assignment);
-            asma("mov eax, [eax + " << ObjectLayout::transformToFieldIndexInAnObject(0) << " + 4*edx] ; get array component at index");
         }
+        asma("lea eax, [eax + " << ObjectLayout::transformToFieldIndexInAnObject(0) << " + 4*edx] ; get array component at index");
     } else {
         asma("pop eax ; get back lhs reference value");
     }
