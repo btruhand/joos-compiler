@@ -904,8 +904,8 @@ void CodeGenerator::traverseAndGenerate(MethodInvoke* invoke) {
         targetReferencePushed = true;
     }
 
-    if(targetReferencePushed) {
-        // if temporary storage was used, then
+    if(targetReferencePushed && !pushThis) {
+        // a target reference was obtained that is not this
         // check that the prefix's value is not null
         asma("cmp eax, 0 ; check that prefix's value is not null");
         std::string null_chk_lbl = LABEL_GEN();
